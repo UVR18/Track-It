@@ -1,23 +1,26 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-} from "recharts"
+import { PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts"
 import { dummyMonthlyData, dummyCategoryData, dummyStats } from "@/lib/dummy-data"
 import { TrendingUp, Wallet, Target, PiggyBank } from "lucide-react"
+import { useTheme } from "next-themes"
+import { useEffect, useState } from "react"
 
 export function FinancialOverviewCharts() {
+  const { theme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899"]
+
+  const textColor = theme === "dark" ? "#e5e7eb" : "#1f2937"
+  const gridColor = theme === "dark" ? "#374151" : "#e5e7eb"
+
+  if (!mounted) return null
 
   return (
     <div className="space-y-6">
@@ -78,30 +81,27 @@ export function FinancialOverviewCharts() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Monthly Trend */}
+        {/* Monthly Trend - Changed to Bar Chart */}
         <Card>
           <CardHeader>
             <CardTitle>Monthly Spending Trend</CardTitle>
             <CardDescription>Your expenses over the last 6 months</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={dummyMonthlyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" />
-                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
-                <YAxis stroke="hsl(var(--muted-foreground))" />
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dummyMonthlyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis dataKey="month" stroke={textColor} />
+                <YAxis stroke={textColor} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
+                  contentStyle={{
+                    backgroundColor: theme === "dark" ? "#1f2937" : "#ffffff",
+                    border: `1px solid ${gridColor}`,
+                    color: textColor,
+                  }}
                 />
-                <Line
-                  type="monotone"
-                  dataKey="expenses"
-                  stroke="#3b82f6"
-                  strokeWidth={3}
-                  dot={{ fill: "#3b82f6", r: 5 }}
-                  activeDot={{ r: 7 }}
-                />
-              </LineChart>
+                <Bar dataKey="expenses" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+              </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
@@ -112,8 +112,8 @@ export function FinancialOverviewCharts() {
             <CardTitle>Spending by Category</CardTitle>
             <CardDescription>Distribution of your expenses</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={dummyCategoryData}
@@ -122,14 +122,18 @@ export function FinancialOverviewCharts() {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  label
+                  label={({ category, percent }) => `${category} ${(percent * 100).toFixed(0)}%`}
                 >
                   {dummyCategoryData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={{ backgroundColor: "hsl(var(--background))", border: "1px solid hsl(var(--border))" }}
+                  contentStyle={{
+                    backgroundColor: theme === "dark" ? "#1f2937" : "#ffffff",
+                    border: `1px solid ${gridColor}`,
+                    color: textColor,
+                  }}
                 />
               </PieChart>
             </ResponsiveContainer>

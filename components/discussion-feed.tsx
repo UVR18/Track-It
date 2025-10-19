@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
 import { MessageSquare, ThumbsUp, Clock, TrendingUp } from "lucide-react"
 import { CreatePostDialog } from "@/components/create-post-dialog"
 import { useState } from "react"
@@ -184,9 +185,137 @@ const categories = ["All", "Success Stories", "Questions", "Tips", "Advice", "In
 export function DiscussionFeed() {
   const [showCreatePost, setShowCreatePost] = useState(false)
   const [activeCategory, setActiveCategory] = useState("All")
+  const [discussionLikes, setDiscussionLikes] = useState<Record<number, boolean>>({})
+  const [expandedComments, setExpandedComments] = useState<Record<number, boolean>>({})
+  const [comments, setComments] = useState<Record<number, Array<{ id: string; author: string; text: string }>>>({})
+  const [commentInput, setCommentInput] = useState<Record<number, string>>({})
 
   const filteredDiscussions =
     activeCategory === "All" ? discussions : discussions.filter((d) => d.category === activeCategory)
+
+  const handleLike = (id: number) => {
+    setDiscussionLikes((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }))
+  }
+
+  const handleAddComment = (id: number) => {
+    const text = commentInput[id]?.trim()
+    if (!text) return
+
+    setComments((prev) => ({
+      ...prev,
+      [id]: [
+        ...(prev[id] || []),
+        {
+          id: Date.now().toString(),
+          author: "You",
+          text,
+        },
+      ],
+    }))
+    setCommentInput((prev) => ({
+      ...prev,
+      [id]: "",
+    }))
+  }
+
+  const renderDiscussionCard = (discussion: (typeof discussions)[0]) => (
+    <div key={discussion.id} className="p-4 rounded-lg border bg-card/30 space-y-3">
+      <div className="flex items-start gap-3">
+        <Avatar className="h-10 w-10">
+          <AvatarImage src={discussion.avatar || "/placeholder.svg"} alt={discussion.author} />
+          <AvatarFallback>
+            {discussion.author
+              .split(" ")
+              .map((n) => n[0])
+              .join("")}
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-semibold text-sm">{discussion.title}</h3>
+            {discussion.trending && (
+              <Badge variant="secondary" className="text-xs">
+                <TrendingUp className="h-3 w-3 mr-1" />
+                Trending
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+            <span>{discussion.author}</span>
+            <span>•</span>
+            <Badge variant="outline" className="text-xs">
+              {discussion.category}
+            </Badge>
+            <span>•</span>
+            <div className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              <span>{discussion.timeAgo}</span>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground mb-3">{discussion.content}</p>
+          <div className="flex items-center gap-4 mb-3">
+            <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => handleLike(discussion.id)}>
+              <ThumbsUp
+                className={`h-3 w-3 mr-1 ${discussionLikes[discussion.id] ? "fill-current text-accent" : ""}`}
+              />
+              {discussion.likes + (discussionLikes[discussion.id] ? 1 : 0)}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2"
+              onClick={() =>
+                setExpandedComments((prev) => ({
+                  ...prev,
+                  [discussion.id]: !prev[discussion.id],
+                }))
+              }
+            >
+              <MessageSquare className="h-3 w-3 mr-1" />
+              {discussion.replies + (comments[discussion.id]?.length || 0)}
+            </Button>
+          </div>
+
+          {expandedComments[discussion.id] && (
+            <div className="mt-4 pt-4 border-t space-y-3">
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {comments[discussion.id]?.map((comment) => (
+                  <div key={comment.id} className="p-2 bg-muted/30 rounded text-sm">
+                    <p className="font-medium text-xs text-accent">{comment.author}</p>
+                    <p className="text-xs text-foreground mt-1">{comment.text}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add a comment..."
+                  value={commentInput[discussion.id] || ""}
+                  onChange={(e) =>
+                    setCommentInput((prev) => ({
+                      ...prev,
+                      [discussion.id]: e.target.value,
+                    }))
+                  }
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") {
+                      handleAddComment(discussion.id)
+                    }
+                  }}
+                  className="text-xs h-8"
+                />
+                <Button size="sm" onClick={() => handleAddComment(discussion.id)} className="h-8">
+                  Post
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <>
@@ -223,55 +352,7 @@ export function DiscussionFeed() {
             </div>
 
             <TabsContent value="recent" className="space-y-4">
-              {filteredDiscussions.map((discussion) => (
-                <div key={discussion.id} className="p-4 rounded-lg border bg-card/30 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={discussion.avatar || "/placeholder.svg"} alt={discussion.author} />
-                      <AvatarFallback>
-                        {discussion.author
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-sm">{discussion.title}</h3>
-                        {discussion.trending && (
-                          <Badge variant="secondary" className="text-xs">
-                            <TrendingUp className="h-3 w-3 mr-1" />
-                            Trending
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                        <span>{discussion.author}</span>
-                        <span>•</span>
-                        <Badge variant="outline" className="text-xs">
-                          {discussion.category}
-                        </Badge>
-                        <span>•</span>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{discussion.timeAgo}</span>
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-3">{discussion.content}</p>
-                      <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="sm" className="h-8 px-2">
-                          <ThumbsUp className="h-3 w-3 mr-1" />
-                          {discussion.likes}
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-8 px-2">
-                          <MessageSquare className="h-3 w-3 mr-1" />
-                          {discussion.replies}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+              {filteredDiscussions.map(renderDiscussionCard)}
             </TabsContent>
 
             <TabsContent value="trending" className="space-y-4">
@@ -282,57 +363,7 @@ export function DiscussionFeed() {
                   <p className="text-sm text-muted-foreground">Check back later for trending topics</p>
                 </div>
               ) : (
-                filteredDiscussions
-                  .filter((d) => d.trending)
-                  .map((discussion) => (
-                    <div key={discussion.id} className="p-4 rounded-lg border bg-card/30 space-y-3">
-                      <div className="flex items-start gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={discussion.avatar || "/placeholder.svg"} alt={discussion.author} />
-                          <AvatarFallback>
-                            {discussion.author
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-sm">{discussion.title}</h3>
-                            {discussion.trending && (
-                              <Badge variant="secondary" className="text-xs">
-                                <TrendingUp className="h-3 w-3 mr-1" />
-                                Trending
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                            <span>{discussion.author}</span>
-                            <span>•</span>
-                            <Badge variant="outline" className="text-xs">
-                              {discussion.category}
-                            </Badge>
-                            <span>•</span>
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              <span>{discussion.timeAgo}</span>
-                            </div>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-3">{discussion.content}</p>
-                          <div className="flex items-center gap-4">
-                            <Button variant="ghost" size="sm" className="h-8 px-2">
-                              <ThumbsUp className="h-3 w-3 mr-1" />
-                              {discussion.likes}
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-8 px-2">
-                              <MessageSquare className="h-3 w-3 mr-1" />
-                              {discussion.replies}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
+                filteredDiscussions.filter((d) => d.trending).map(renderDiscussionCard)
               )}
             </TabsContent>
 
@@ -344,57 +375,7 @@ export function DiscussionFeed() {
                   <p className="text-sm text-muted-foreground">Popular discussions will appear here</p>
                 </div>
               ) : (
-                filteredDiscussions
-                  .sort((a, b) => b.likes - a.likes)
-                  .map((discussion) => (
-                    <div key={discussion.id} className="p-4 rounded-lg border bg-card/30 space-y-3">
-                      <div className="flex items-start gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={discussion.avatar || "/placeholder.svg"} alt={discussion.author} />
-                          <AvatarFallback>
-                            {discussion.author
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-sm">{discussion.title}</h3>
-                            {discussion.trending && (
-                              <Badge variant="secondary" className="text-xs">
-                                <TrendingUp className="h-3 w-3 mr-1" />
-                                Trending
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                            <span>{discussion.author}</span>
-                            <span>•</span>
-                            <Badge variant="outline" className="text-xs">
-                              {discussion.category}
-                            </Badge>
-                            <span>•</span>
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              <span>{discussion.timeAgo}</span>
-                            </div>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-3">{discussion.content}</p>
-                          <div className="flex items-center gap-4">
-                            <Button variant="ghost" size="sm" className="h-8 px-2">
-                              <ThumbsUp className="h-3 w-3 mr-1" />
-                              {discussion.likes}
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-8 px-2">
-                              <MessageSquare className="h-3 w-3 mr-1" />
-                              {discussion.replies}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
+                filteredDiscussions.sort((a, b) => b.likes - a.likes).map(renderDiscussionCard)
               )}
             </TabsContent>
           </Tabs>

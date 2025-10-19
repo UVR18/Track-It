@@ -15,6 +15,60 @@ interface Message {
   content: string
 }
 
+const formatAiResponse = (text: string) => {
+  const lines = text.split("\n")
+  const elements: React.ReactNode[] = []
+  let i = 0
+
+  while (i < lines.length) {
+    const line = lines[i].trim()
+
+    if (!line) {
+      i++
+      continue
+    }
+
+    // Check for headings (lines ending with :)
+    if (line.endsWith(":") && line.length < 50) {
+      elements.push(
+        <h4 key={`heading-${i}`} className="font-semibold text-sm mt-2 mb-1 text-accent">
+          {line}
+        </h4>,
+      )
+    }
+    // Check for bullet points
+    else if (line.startsWith("•") || line.startsWith("-") || line.startsWith("*")) {
+      elements.push(
+        <div key={`bullet-${i}`} className="flex gap-2 text-xs ml-2 mb-1">
+          <span className="text-accent">•</span>
+          <span>{line.replace(/^[•\-*]\s*/, "")}</span>
+        </div>,
+      )
+    }
+    // Check for numbered items
+    else if (/^\d+\./.test(line)) {
+      elements.push(
+        <div key={`number-${i}`} className="flex gap-2 text-xs ml-2 mb-1">
+          <span className="text-accent font-semibold">{line.match(/^\d+\./)?.[0]}</span>
+          <span>{line.replace(/^\d+\.\s*/, "")}</span>
+        </div>,
+      )
+    }
+    // Regular paragraph
+    else {
+      elements.push(
+        <p key={`para-${i}`} className="text-xs mb-2 leading-relaxed">
+          {line}
+        </p>,
+      )
+    }
+
+    i++
+  }
+
+  return elements
+}
+
 export function AiFinancialChat({ onClose }: { onClose: () => void }) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
@@ -110,7 +164,11 @@ export function AiFinancialChat({ onClose }: { onClose: () => void }) {
                     : "bg-muted text-foreground rounded-bl-none"
                 }`}
               >
-                <p className="text-sm">{message.content}</p>
+                {message.role === "user" ? (
+                  <p className="text-sm">{message.content}</p>
+                ) : (
+                  <div className="text-sm space-y-1">{formatAiResponse(message.content)}</div>
+                )}
               </div>
             </div>
           ))}

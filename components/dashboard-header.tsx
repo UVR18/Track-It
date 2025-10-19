@@ -11,11 +11,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Bell, Settings, LogOut, User, Moon, Sun } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
+import { useState } from "react"
 
 const notifications = [
   {
@@ -48,8 +50,11 @@ export function DashboardHeader() {
   const { theme, setTheme } = useTheme()
   const router = useRouter()
   const pathname = usePathname()
+  const [showProfileDialog, setShowProfileDialog] = useState(false)
 
   const handleLogout = () => {
+    localStorage.clear()
+    sessionStorage.clear()
     router.push("/")
   }
 
@@ -64,6 +69,13 @@ export function DashboardHeader() {
   ]
 
   const unreadCount = notifications.filter((n) => !n.read).length
+  const userEmail = "john.doe@example.com"
+  const userName = userEmail
+    .split("@")[0]
+    .replace(".", " ")
+    .split(" ")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ")
 
   return (
     <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
@@ -144,16 +156,16 @@ export function DashboardHeader() {
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">John Doe</p>
-                    <p className="text-xs leading-none text-muted-foreground">john@example.com</p>
+                    <p className="text-sm font-medium leading-none">{userName}</p>
+                    <p className="text-xs leading-none text-muted-foreground">{userEmail}</p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowProfileDialog(true)}>
                   <User className="mr-2 h-4 w-4" />
                   <span>Profile</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push("/settings")}>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </DropdownMenuItem>
@@ -167,6 +179,44 @@ export function DashboardHeader() {
           </div>
         </div>
       </div>
+
+      <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>User Profile</DialogTitle>
+            <DialogDescription>Your account information</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex justify-center">
+              <Avatar className="h-20 w-20">
+                <AvatarImage src="/diverse-user-avatars.png" alt="User" />
+                <AvatarFallback>JD</AvatarFallback>
+              </Avatar>
+            </div>
+            <div className="space-y-3 text-center">
+              <div>
+                <p className="text-xs text-muted-foreground">Name</p>
+                <p className="font-semibold">{userName}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Email</p>
+                <p className="font-semibold text-accent">{userEmail}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Account Status</p>
+                <Badge className="mt-1">Active</Badge>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Member Since</p>
+                <p className="font-semibold">January 2024</p>
+              </div>
+            </div>
+            <Button className="w-full" onClick={() => setShowProfileDialog(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </header>
   )
 }
